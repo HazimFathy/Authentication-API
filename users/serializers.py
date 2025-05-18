@@ -112,16 +112,21 @@ class SendOTPSerializer(serializers.Serializer):
     
     def validate(self, attrs):
         email = attrs.get('email')
+        
         if not User.objects.filter(email=email).exists():
             raise serializers.ValidationError("User with this email not found.")
+        user = User.objects.get(email=email)
+        
+        if user.profile.request_new_otp():
+            raise serializers.ValidationError("You can request a new OTP after 1.5 minutes.")
         return attrs
-    
+        
     def save(self, **kwargs):
         email = self.validated_data['email']
         user = User.objects.get(email=email)
         otp = random.randint(1000, 9999)
         
-        user_profile = user.UserProfile
+        user_profile = user.profile
         user_profile.otp = otp
         user_profile.otp_created_at = timezone.now()
         user_profile.save()
@@ -146,7 +151,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         confirm_password = attrs.get('confirm_password')
         try:
             user = User.objects.get(email=email)
-            user_profile = user.UserProfile
+            user_profile = user.profile
         except ObjectDoesNotExist:
             raise serializers.ValidationError({"error": "User or profile not found."})
         

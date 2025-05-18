@@ -13,7 +13,7 @@ from .serializers import (
     ResetPasswordSerializer,
 )
 
-# Create your views here.
+
 class UserViewSet(mixins.RetrieveModelMixin,viewsets.GenericViewSet):
     
     queryset = User.objects.all()
