@@ -149,6 +149,7 @@ class ResetPasswordSerializer(serializers.Serializer):
         otp = attrs.get('otp')
         password = attrs.get('password')
         confirm_password = attrs.get('confirm_password')
+        
         try:
             user = User.objects.get(email=email)
             user_profile = user.profile
