@@ -1,10 +1,8 @@
 import random
 from django.contrib.auth import authenticate, get_user_model
-from django.core.cache import cache
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
@@ -75,20 +73,14 @@ class LoginSerializer(serializers.Serializer):
         username_or_email = attrs.get('username_or_email')
         password = attrs.get('password')
 
-        
-        user = None
-        if '@' in username_or_email:
-            try:
-                user_obj = User.objects.get(email=username_or_email)
-                username = user_obj.username
-            except User.DoesNotExist:
-                raise serializers.ValidationError("No user with this email.")
-        else:
-            username = username_or_email
+        try:
+            user = User.objects.get(email=username_or_email) if '@' in username_or_email else User.objects.get(username=username_or_email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Invalid credentials.")
 
-        user = authenticate(username=username, password=password)
+        user = authenticate(username=user.username, password=password)
         if not user:
-            raise serializers.ValidationError("invaild Username or Password.")
+            raise serializers.ValidationError("Invalid credentials.")
 
 
         refresh = RefreshToken.for_user(user)
@@ -114,7 +106,7 @@ class SendOTPSerializer(serializers.Serializer):
         email = attrs.get('email')
         
         if not User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("User with this email not found.")
+            raise serializers.ValidationError("User not found.")
         user = User.objects.get(email=email)
         
         if user.profile.request_new_otp():
@@ -154,13 +146,16 @@ class ResetPasswordSerializer(serializers.Serializer):
             user = User.objects.get(email=email)
             user_profile = user.profile
         except ObjectDoesNotExist:
-            raise serializers.ValidationError({"error": "User or profile not found."})
+            raise serializers.ValidationError({"error": "User not found."})
+        
+        if user_profile.otp is None:
+            raise serializers.ValidationError({"error":"Invalid or expired OTP."})
         
         if user_profile.is_otp_expired():
-            raise serializers.ValidationError({"error":"OTP has expired. Please request a new one."})
+            raise serializers.ValidationError({"error":"Invalid or expired OTP."})
         
         if str(user_profile.otp) != str(otp):
-            raise serializers.ValidationError({"error": "Invalid OTP number."})
+            raise serializers.ValidationError({"error": "Invalid or expired OTP."})
         
         if password != confirm_password:
             raise serializers.ValidationError({"error":"passwords don't match."})

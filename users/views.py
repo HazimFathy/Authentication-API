@@ -39,7 +39,7 @@ class UserViewSet(mixins.RetrieveModelMixin,viewsets.GenericViewSet):
         serializer.save()
         return Response({'detail': 'User created successfully'}, status=201)
 
-    @action(methods=["get"], detail=False)
+    @action(methods=["get"], detail=False, permission_classes=[IsAuthenticated])
     def get_me(self, request):
         user = request.user
         serializer = self.get_serializer(user)
@@ -63,7 +63,7 @@ class UserViewSet(mixins.RetrieveModelMixin,viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail":"check your email for otp number"},status=status.HTTP_200_OK)
+        return Response({"detail":"OTP has been sent to your email."},status=status.HTTP_200_OK)
     
     @action(methods=['post'], detail=False)
     def reset_password(self, request):
